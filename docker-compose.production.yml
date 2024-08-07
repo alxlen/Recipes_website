@@ -1,0 +1,41 @@
+version: '3'
+
+volumes:
+  pg_data:
+  static:
+  media:
+
+services:
+  db:
+    image: postgres:13.10
+    env_file: backend/.env
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+#    healthcheck:
+#      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+#      interval: 10s
+#      timeout: 3s
+#      retries: 3
+  backend:
+    image: alxlen/foodgram_backend
+    env_file: backend/.env
+    depends_on:
+      - db
+    volumes:
+      - static:/backend_static
+      - media:/media
+  frontend:
+    image: alxlen/foodgram_frontend
+    command: cp -r /app/build/. /static/
+    volumes:
+      - static:/static
+  gateway:
+    image: alxlen/foodgram_gateway
+    ports:
+      - 9000:80
+    depends_on:
+      - frontend
+      - backend
+    volumes:
+      - static:/static
+      - media:/media

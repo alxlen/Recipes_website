@@ -1,6 +1,6 @@
 frontend/node_modules
 infra/frontend/build
-.env
+backend/.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -106,10 +106,10 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+backend/.env
 .venv
 .venv/
-.env/
+backend/.env/
 env/
 venv/
 ENV/
@@ -134,9 +134,26 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# .idea
+# Папки, создаваемые средой разработки
 .idea
-.vscode
+.DS_Store
+.AppleDouble
+.LSOverride
 
-static/
+*.sublime-project
+*.sublime-workspace
+
+.vscode/
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+.mypy_cache
+
+# папки со статикой и медиа
 media/
+
+# Others
+node_modules
+docker-compose.yml
