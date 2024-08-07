@@ -27,7 +27,7 @@ class UserAvatarSerializer(serializers.ModelSerializer):
 class UserCreateSerializer(BaseUserCreateSerializer):
     class Meta(BaseUserCreateSerializer.Meta):
         model = User
-        fields = ('id', 'email', 'username',  'first_name', 'last_name',
+        fields = ('id', 'email', 'username', 'first_name', 'last_name',
                   'password')
         extra_kwargs = {'password': {'write_only': True}}
 
@@ -79,7 +79,8 @@ class UserSerializer(BaseUserSerializer):
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        recipes = self.context.get('recipes', Recipe.objects.filter(author=obj))
+        recipes = self.context.get('recipes',
+                                   Recipe.objects.filter(author=obj))
         recipes_limit = request.query_params.get('recipes_limit')
         if recipes_limit:
             recipes = recipes[:int(recipes_limit)]

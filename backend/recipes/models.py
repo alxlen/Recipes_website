@@ -62,7 +62,8 @@ class Recipe(models.Model):
     name = models.CharField('Название',
                             max_length=MAX_LENGTH_RECIPE)
     text = models.TextField('Описание')
-    cooking_time = models.PositiveSmallIntegerField('Время приготовления (мин)')
+    cooking_time = models.PositiveSmallIntegerField(
+        'Время приготовления (мин)')
     pub_date = models.DateTimeField('Дата публикации',
                                     auto_now_add=True)
     ingredients = models.ManyToManyField(Ingredient,
@@ -164,5 +165,3 @@ class ShoppingCart(models.Model):
 
     def __str__(self):
         return f'Список покупок {self.user}: {self.recipe}'
-
-

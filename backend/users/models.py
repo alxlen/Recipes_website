@@ -56,7 +56,7 @@ class Subscription(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['user', 'author'],
                                     name='unique_subscription')
-            ]
+        ]
         ordering = ('user',)
 
     def __str__(self):

@@ -124,7 +124,8 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         if request.method == 'DELETE':
-            subscription = Subscription.objects.filter(user=user, author=author)
+            subscription = Subscription.objects.filter(user=user,
+                                                       author=author)
             if subscription.exists():
                 subscription.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
@@ -171,7 +172,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 Favorite.objects.create(user=user, recipe=recipe)
                 serializer = RecipeMinifiedSerializer(
                     recipe, context={"request": request})
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.data,
+                                status=status.HTTP_201_CREATED)
             return Response({'errors': 'Рецепт уже в избранном.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -209,7 +211,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 ShoppingCart.objects.create(user=user, recipe=recipe)
                 serializer = RecipeMinifiedSerializer(
                     recipe, context={"request": request})
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.data,
+                                status=status.HTTP_201_CREATED)
             return Response({'errors': 'Рецепт уже в списке покупок.'},
                             status=status.HTTP_400_BAD_REQUEST)
 
