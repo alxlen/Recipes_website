@@ -2,7 +2,6 @@ import csv
 import os
 
 from django.core.management import BaseCommand
-from django.db import connection
 
 from recipes.models import Ingredient
 
