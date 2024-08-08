@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = 'Загружает данные из файла .csv'
 
     def handle(self, *args, **options):
-        file_path = './data/Ingredients.csv'
+        file_path = '/app/data/ingredients.csv'
 
         if not os.path.exists(file_path):
             self.stdout.write(self.style.ERROR(f'Файл не найден: {file_path}'))
