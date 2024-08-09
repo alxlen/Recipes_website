@@ -1,5 +1,3 @@
-version: '3.8'
-
 volumes:
   pg_data:
   static:
@@ -17,7 +15,7 @@ services:
     depends_on:
       - db
     volumes:
-      - static:/backend_static
+      - static:/static
       - media:/media
     expose:
       - "8000"
