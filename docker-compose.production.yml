@@ -16,7 +16,7 @@ services:
       - db
     volumes:
       - static:/backend_static
-      - media:/media
+      - media:/app/media
     expose:
       - "8000"
   frontend:
