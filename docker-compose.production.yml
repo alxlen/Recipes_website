@@ -18,8 +18,7 @@ services:
     image: alxlen/foodgram_backend
     env_file: .env
     depends_on:
-      - db:
-          condition: service_healthy
+      - db
     volumes:
       - static:/static
       - media:/media
