@@ -1,6 +1,7 @@
 import csv
 import os
 
+from django.conf import settings
 from django.core.management import BaseCommand
 
 from recipes.models import Ingredient
@@ -10,11 +11,8 @@ class Command(BaseCommand):
     help = 'Загружает данные из файла .csv'
 
     def handle(self, *args, **options):
-        file_path = '/app/data/ingredients.csv'
-
-        if not os.path.exists(file_path):
-            self.stdout.write(self.style.ERROR(f'Файл не найден: {file_path}'))
-            return
+        file_name = 'ingredients.csv'
+        file_path = os.path.join(settings.BASE_DIR, 'data', file_name)
 
         self.stdout.write(self.style.NOTICE('Загрузка данных'))
 

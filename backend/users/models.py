@@ -1,13 +1,18 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 
 from .constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_FIRST_NAME,
-                        MAX_LENGTH_LAST_NAME, MAX_LENGTH_USERNAME)
+                        MAX_LENGTH_LAST_NAME, MAX_LENGTH_USERNAME,
+                        USERNAME_VALIDATOR)
 
 
 class User(AbstractUser):
     """Модель пользователя."""
+
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
+    USERNAME_FIELD = 'email'
 
     email = models.EmailField('Электронная почта',
                               max_length=MAX_LENGTH_EMAIL,
@@ -16,7 +21,7 @@ class User(AbstractUser):
                                 max_length=MAX_LENGTH_USERNAME,
                                 unique=True,
                                 validators=[RegexValidator(
-                                    regex=r'^[\w.@+-]+$',
+                                    regex=USERNAME_VALIDATOR,
                                     message='Недопустимые символы в имени.')])
     first_name = models.CharField('Имя',
                                   max_length=MAX_LENGTH_FIRST_NAME)
@@ -26,9 +31,6 @@ class User(AbstractUser):
                                upload_to='avatars/',
                                null=True, blank=True)
 
-    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
-    USERNAME_FIELD = 'email'
-
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
@@ -37,17 +39,22 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+    def clean(self):
+        if self.username == 'me':
+            raise ValidationError('Недопустимое имя пользователя.')
+        super().clean()
+
 
 class Subscription(models.Model):
     """Модель подписки пользователей."""
 
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
-                             related_name='subscriber',
+                             related_name='subscriptions',
                              verbose_name='Подписчик')
     author = models.ForeignKey(User,
                                on_delete=models.CASCADE,
-                               related_name='subscribed_to',
+                               related_name='subscribers',
                                verbose_name='Подписки')
 
     class Meta:

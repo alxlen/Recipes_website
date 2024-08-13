@@ -24,13 +24,12 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
-        queryset = queryset.annotate(favorites_count=Count('favorited_by'))
+        queryset = queryset.annotate(favorites_count=Count('favorite_users'))
         return queryset
 
+    @admin.display(description='Добавлено раз')
     def favorites_count(self, obj):
         return obj.favorites_count
-
-    favorites_count.short_description = 'Добавлено раз'
 
 
 @admin.register(Favorite)

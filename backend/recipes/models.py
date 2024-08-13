@@ -1,11 +1,11 @@
 from django.contrib.auth import get_user_model
-from django.core.validators import RegexValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.crypto import get_random_string
 
 from .constants import (MAX_LENGTH_INGREDIENT, MAX_LENGTH_MEASURE,
                         MAX_LENGTH_RECIPE, MAX_LENGTH_TAG, MAX_LENGTH_URL,
-                        TITLE_CUT)
+                        MIN_COOKING_TIME, TITLE_CUT)
 
 User = get_user_model()
 
@@ -23,6 +23,12 @@ class Ingredient(models.Model):
         verbose_name = 'ингредиент'
         verbose_name_plural = 'Ингредиенты'
         ordering = ('name',)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name', 'measurement_unit'],
+                name='unique_ingredient_measurement_unit'
+            )
+        ]
 
     def __str__(self):
         return self.name[:TITLE_CUT]
@@ -36,12 +42,7 @@ class Tag(models.Model):
                             unique=True)
     slug = models.SlugField('Идентификатор',
                             max_length=MAX_LENGTH_TAG,
-                            unique=True,
-                            validators=[
-                                RegexValidator(
-                                    regex=r'^[-a-zA-Z0-9_]+$',
-                                    message='Недопустимые символы в названии.')
-                            ])
+                            unique=True)
 
     class Meta:
         verbose_name = 'тег'
@@ -57,13 +58,13 @@ class Recipe(models.Model):
 
     author = models.ForeignKey(User,
                                on_delete=models.CASCADE,
-                               verbose_name='Автор публикации',
-                               related_name='recipes')
+                               verbose_name='Автор публикации')
     name = models.CharField('Название',
                             max_length=MAX_LENGTH_RECIPE)
     text = models.TextField('Описание')
     cooking_time = models.PositiveSmallIntegerField(
-        'Время приготовления (мин)')
+        'Время приготовления (мин.)',
+        validators=[MinValueValidator(MIN_COOKING_TIME)])
     pub_date = models.DateTimeField('Дата публикации',
                                     auto_now_add=True)
     ingredients = models.ManyToManyField(Ingredient,
@@ -126,7 +127,7 @@ class Favorite(models.Model):
                              verbose_name='Пользователь')
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               related_name='favorited_by',
+                               related_name='favorite_users',
                                verbose_name='Рецепты в избранном')
 
     class Meta:
@@ -147,11 +148,11 @@ class ShoppingCart(models.Model):
 
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
-                             related_name='shopping_cart',
+                             related_name='shopping_cart_recipes',
                              verbose_name='Пользователь')
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               related_name='in_shopping_cart',
+                               related_name='in_shopping_carts',
                                verbose_name='Рецепты в списке покупок')
 
     class Meta:
