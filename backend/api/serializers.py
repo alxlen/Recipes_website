@@ -48,8 +48,9 @@ class UserDetailSerializer(BaseUserSerializer):
 
     def get_is_subscribed(self, obj):
         request = self.context.get('request')
-        return (request and request.user.is_authenticated and
-                request.user.subscriptions.filter(author=obj).exists())
+        return (request
+                and request.user.is_authenticated
+                and request.user.subscriptions.filter(author=obj).exists())
 
 
 class UserListSerializer(BaseUserSerializer):
@@ -66,7 +67,8 @@ class UserSerializer(UserDetailSerializer):
 
     class Meta(UserDetailSerializer.Meta):
         model = User
-        fields = UserDetailSerializer.Meta.fields + ('recipes_count', 'recipes')
+        fields = UserDetailSerializer.Meta.fields + ('recipes_count',
+                                                     'recipes')
 
     def get_recipes_count(self, obj):
         return obj.recipes.count()
