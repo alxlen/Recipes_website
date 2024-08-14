@@ -40,7 +40,6 @@ class UserViewSet(viewsets.ModelViewSet):
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
 
-    @property
     def get_serializer_class(self):
         if self.action == 'avatar':
             return UserAvatarSerializer
