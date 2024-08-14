@@ -1,4 +1,4 @@
-from io import StringIO
+from io import BytesIO
 
 from django.db.models import Count, Prefetch, Sum
 from django.http import FileResponse
@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import (SAFE_METHODS, AllowAny,
                                         IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
@@ -39,6 +40,7 @@ class UserViewSet(viewsets.ModelViewSet):
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
 
+    @property
     def get_serializer_class(self):
         if self.action == 'avatar':
             return UserAvatarSerializer
@@ -59,8 +61,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def avatar(self, request):
         user = request.user
         if request.method == 'PUT':
-            serializer = UserAvatarSerializer(user, data=request.data,
-                                              partial=True)
+            serializer = UserAvatarSerializer(user, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
@@ -70,6 +71,10 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'],
             permission_classes=[IsAuthenticated])
     def me(self, request):
+        if not request.user.is_authenticated:
+            return Response(
+                {'detail': 'Незарегистрированный пользователь.'},
+                status=status.HTTP_401_UNAUTHORIZED)
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
@@ -99,7 +104,12 @@ class UserViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        Subscription.objects.filter(user=user, author=author).delete()
+        subscription = Subscription.objects.filter(user=user,
+                                                   author=author).first()
+        if not subscription:
+            return Response({'errors': 'Подписка не существует.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        subscription.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'],
@@ -110,8 +120,8 @@ class UserViewSet(viewsets.ModelViewSet):
         authors = User.objects.filter(id__in=authors_id).annotate(
             recipes_count=Count('recipes')
         ).prefetch_related(
-            Prefetch('recipes', queryset=Recipe.objects.all())
-        )
+            Prefetch('recipes', queryset=Recipe.objects.all().order_by('id'))
+        ).order_by('id')
         paginated_queryset = self.paginate_queryset(authors)
         serializer = UserSerializer(paginated_queryset, many=True,
                                     context={'request': request})
@@ -129,6 +139,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.request.method in SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeWriteSerializer
+
+    def perform_destroy(self, instance):
+        if instance.author != self.request.user:
+            raise PermissionDenied('Нельзя удалять чужие рецепты.')
+        instance.delete()
 
     @staticmethod
     def handle_post_action(request, serializer_class, user, recipe):
@@ -182,7 +197,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         ingredients = self.get_shopping_cart_ingredients(user)
         return self.create_shopping_cart_file(ingredients)
 
-    def get_shopping_cart_ingredients(self, user):
+    @staticmethod
+    def get_shopping_cart_ingredients(user):
         shopping_cart_items = (ShoppingCart.objects.filter(user=user)
                                .select_related('recipe'))
         return IngredientInRecipe.objects.filter(
@@ -191,13 +207,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
             'ingredient__name', 'ingredient__measurement_unit'
         ).annotate(total_amount=Sum('amount'))
 
-    def create_shopping_cart_file(self, ingredients):
-        output = StringIO()
+    @staticmethod
+    def create_shopping_cart_file(ingredients):
+        output = BytesIO()
         for ingredient in ingredients:
             output.write(
                 f"{ingredient['ingredient__name']} "
                 f"({ingredient['ingredient__measurement_unit']}) — "
-                f"{ingredient['total_quantity']}\n"
+                f"{ingredient['total_amount']}\n".encode('utf-8')
             )
         output.seek(0)
         response = FileResponse(output, as_attachment=True,
