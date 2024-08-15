@@ -2,6 +2,7 @@ volumes:
   pg_data:
   static:
   media:
+  docs:
 
 services:
   db:
@@ -37,3 +38,4 @@ services:
     volumes:
       - static:/static
       - media:/media
+      - docs:/usr/share/nginx/html/docs

@@ -135,8 +135,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                          .query_params.get('recipes_limit'))
 
         if recipes_limit and recipes_limit.isdigit():
-            representation['recipes'] = representation['recipes'][
-                                        :int(recipes_limit)]
+            representation['recipes'] = representation['recipes'][:int(
+                recipes_limit)]
         representation['is_subscribed'] = True
         return representation
 
