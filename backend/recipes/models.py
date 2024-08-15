@@ -79,11 +79,6 @@ class Recipe(models.Model):
                                  unique=True,
                                  blank=True)
 
-    def save(self, *args, **kwargs):
-        if not self.short_url:
-            self.short_url = get_random_string(8)
-        super().save(*args, **kwargs)
-
     class Meta:
         verbose_name = 'рецепт'
         verbose_name_plural = 'Рецепты'
@@ -92,6 +87,11 @@ class Recipe(models.Model):
 
     def __str__(self):
         return self.name[:TITLE_CUT]
+
+    def save(self, *args, **kwargs):
+        if not self.short_url:
+            self.short_url = get_random_string(8)
+        super().save(*args, **kwargs)
 
 
 class IngredientInRecipe(models.Model):
@@ -127,7 +127,7 @@ class Favorite(models.Model):
                              verbose_name='Пользователь')
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               related_name='favorite_users',
+                               related_name='favorites',
                                verbose_name='Рецепты в избранном')
 
     class Meta:
@@ -148,11 +148,11 @@ class ShoppingCart(models.Model):
 
     user = models.ForeignKey(User,
                              on_delete=models.CASCADE,
-                             related_name='shopping_cart_recipes',
+                             related_name='shopping_carts',
                              verbose_name='Пользователь')
     recipe = models.ForeignKey(Recipe,
                                on_delete=models.CASCADE,
-                               related_name='in_shopping_carts',
+                               related_name='shopping_carts',
                                verbose_name='Рецепты в списке покупок')
 
     class Meta:

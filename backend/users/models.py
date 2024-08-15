@@ -3,9 +3,9 @@ from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 
-from .constants import (MAX_LENGTH_EMAIL, MAX_LENGTH_FIRST_NAME,
-                        MAX_LENGTH_LAST_NAME, MAX_LENGTH_USERNAME,
-                        USERNAME_VALIDATOR)
+from users.constants import (INVALID_USERNAME, MAX_LENGTH_EMAIL,
+                             MAX_LENGTH_FIRST_NAME, MAX_LENGTH_LAST_NAME,
+                             MAX_LENGTH_USERNAME, USERNAME_VALIDATOR)
 
 
 class User(AbstractUser):
@@ -40,7 +40,7 @@ class User(AbstractUser):
         return self.username
 
     def clean(self):
-        if self.username == 'me':
+        if self.username == INVALID_USERNAME:
             raise ValidationError('Недопустимое имя пользователя.')
         super().clean()
 

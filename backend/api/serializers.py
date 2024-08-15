@@ -1,10 +1,8 @@
 from django.db import transaction
-
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from djoser.serializers import UserSerializer as BaseUserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
-from rest_framework.exceptions import PermissionDenied
 
 from api.constants import MIN_INGREDIENT_AMOUNT
 from recipes.models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
@@ -76,7 +74,7 @@ class UserSerializer(UserDetailSerializer):
 
     def get_recipes(self, obj):
         request = self.context.get('request')
-        recipes = obj.recipes.all().order_by('id')
+        recipes = obj.recipes.all()
         recipes_limit = request.query_params.get('recipes_limit')
         if recipes_limit and recipes_limit.isdigit():
             recipes = recipes[:int(recipes_limit)]
@@ -131,25 +129,16 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return data
 
     def to_representation(self, instance):
-        author = instance.author
-        request = self.context.get('request')
-        recipes_limit = request.query_params.get('recipes_limit')
-        recipes_query = author.recipes.all().order_by('id')
+        representation = UserSerializer(instance.author,
+                                        context=self.context).data
+        recipes_limit = (self.context['request']
+                         .query_params.get('recipes_limit'))
+
         if recipes_limit and recipes_limit.isdigit():
-            recipes_query = recipes_query[:int(recipes_limit)]
-        recipes_count = author.recipes.count()
-        return {
-            'id': author.id,
-            'email': author.email,
-            'username': author.username,
-            'first_name': author.first_name,
-            'last_name': author.last_name,
-            'avatar': request.build_absolute_uri(
-                author.avatar.url) if author.avatar else None,
-            'recipes': RecipeMinifiedSerializer(recipes_query, many=True).data,
-            'recipes_count': recipes_count,
-            'is_subscribed': True
-        }
+            representation['recipes'] = representation['recipes'][
+                                        :int(recipes_limit)]
+        representation['is_subscribed'] = True
+        return representation
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -174,7 +163,8 @@ class IngredientInRecipeCreateSerializer(serializers.ModelSerializer):
     def validate_amount(self, value):
         if value < MIN_INGREDIENT_AMOUNT:
             raise serializers.ValidationError(
-                'Количество ингредиента должно быть больше 0.')
+                f'Количество ингредиента должно быть больше '
+                f'{MIN_INGREDIENT_AMOUNT}.')
         return value
 
 
@@ -208,12 +198,12 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     def get_is_favorited(self, obj):
         request = self.context.get('request')
         return (request.user.is_authenticated
-                and obj.favorite_users.filter(user=request.user).exists())
+                and obj.favorites.filter(user=request.user).exists())
 
     def get_is_in_shopping_cart(self, obj):
         request = self.context.get('request')
         return (request.user.is_authenticated
-                and obj.in_shopping_carts.filter(user=request.user).exists())
+                and obj.shopping_carts.filter(user=request.user).exists())
 
 
 class RecipeWriteSerializer(serializers.ModelSerializer):
@@ -229,10 +219,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                   'image', 'cooking_time')
 
     def validate(self, obj):
-        request = self.context.get('request')
-        if self.instance and self.instance.author != request.user:
-            raise PermissionDenied(
-                'Недостаточно прав на выполнение этого действия.')
         for field in ['name', 'text', 'cooking_time', 'image']:
             if not obj.get(field):
                 raise serializers.ValidationError(
@@ -254,8 +240,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def tags_and_ingredients_set(self, recipe, tags, ingredients):
+        if self.instance:
+            recipe.recipe_ingredients.all().delete()
         recipe.tags.set(tags)
-        recipe.recipe_ingredients.all().delete()
         ingredients_list = [
             IngredientInRecipe(
                 recipe=recipe,
@@ -277,11 +264,10 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, instance, validated_data):
-        tags = validated_data.pop('tags', None)
-        ingredients = validated_data.pop('ingredients', None)
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
         instance = super().update(instance, validated_data)
-        if tags is not None and ingredients is not None:
-            self.tags_and_ingredients_set(instance, tags, ingredients)
+        self.tags_and_ingredients_set(instance, tags, ingredients)
         return instance
 
     def to_representation(self, instance):

@@ -3,7 +3,6 @@ from io import BytesIO
 from django.db.models import Count, Prefetch, Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -15,6 +14,7 @@ from rest_framework.response import Response
 
 from api.filters import IngredientFilter, RecipeFilter
 from api.pagination import RecipePagination, UserPagination
+from api.permissions import IsAuthorOrReadOnly
 from api.serializers import (FavoriteSerializer, IngredientSerializer,
                              PasswordChangeSerializer, RecipeReadSerializer,
                              RecipeWriteSerializer, ShoppingCartSerializer,
@@ -33,9 +33,9 @@ class UserViewSet(viewsets.ModelViewSet):
     pagination_class = UserPagination
 
     def get_permissions(self):
-        if self.action in ['create', 'list', 'retrieve', 'me']:
+        if self.action in ['create', 'list', 'retrieve']:
             self.permission_classes = [AllowAny]
-        elif self.action in ['avatar', 'set_password', 'subscribe',
+        elif self.action in ['avatar', 'me', 'set_password', 'subscribe',
                              'subscriptions']:
             self.permission_classes = [IsAuthenticated]
         return super().get_permissions()
@@ -70,10 +70,6 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'],
             permission_classes=[IsAuthenticated])
     def me(self, request):
-        if not request.user.is_authenticated:
-            return Response(
-                {'detail': 'Незарегистрированный пользователь.'},
-                status=status.HTTP_401_UNAUTHORIZED)
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
@@ -91,10 +87,7 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def subscribe(self, request, pk=None):
         user = request.user
-        try:
-            author = User.objects.get(pk=pk)
-        except User.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        author = get_object_or_404(User, pk=pk)
         if request.method == 'POST':
             serializer = SubscriptionSerializer(
                 data={'user': user.id, 'author': author.id},
@@ -131,18 +124,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = Recipe.objects.all()
     filter_backends = [DjangoFilterBackend]
     filterset_class = RecipeFilter
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
     pagination_class = RecipePagination
 
     def get_serializer_class(self):
         if self.request.method in SAFE_METHODS:
             return RecipeReadSerializer
         return RecipeWriteSerializer
-
-    def perform_destroy(self, instance):
-        if instance.author != self.request.user:
-            raise PermissionDenied('Нельзя удалять чужие рецепты.')
-        instance.delete()
 
     @staticmethod
     def handle_post_action(request, serializer_class, user, recipe):
@@ -226,7 +214,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
     filter_backends = [IngredientFilter]
     search_fields = ['^name']
     pagination_class = None
@@ -236,4 +224,4 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
