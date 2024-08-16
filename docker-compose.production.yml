@@ -36,4 +36,4 @@ services:
     volumes:
       - static:/static
       - media:/media
-      - ~/foodgram/docs:/usr/share/nginx/html/docs
+      - /home/yc-user/foodgram/docs:/usr/share/nginx/html/docs
