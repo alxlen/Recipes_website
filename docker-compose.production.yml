@@ -2,6 +2,7 @@ volumes:
   pg_data:
   static:
   media:
+  docs:
 
 services:
   db:
@@ -17,6 +18,7 @@ services:
     volumes:
       - static:/backend_static
       - media:/app/media
+      - docs:/app/docs
     expose:
       - "8000"
   frontend:
@@ -36,4 +38,4 @@ services:
     volumes:
       - static:/static
       - media:/media
-      - /home/yc-user/foodgram/docs:/usr/share/nginx/html/docs
+      - docs:/usr/share/nginx/html/
