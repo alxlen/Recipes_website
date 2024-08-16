@@ -212,7 +212,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                                               queryset=Tag.objects.all())
     author = UserSerializer(read_only=True)
     ingredients = IngredientInRecipeCreateSerializer(many=True)
-    image = Base64ImageField()
+    image = Base64ImageField(required=False)
 
     class Meta:
         model = Recipe
@@ -220,10 +220,11 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                   'image', 'cooking_time')
 
     def validate(self, obj):
-        for field in ['name', 'text', 'cooking_time', 'image']:
+        if not self.instance and 'image' not in self.initial_data:
+            raise serializers.ValidationError('Обязательное поле.')
+        for field in ['name', 'text', 'cooking_time']:
             if not obj.get(field):
-                raise serializers.ValidationError(
-                    f'{field} - Обязательное поле.')
+                raise serializers.ValidationError('Обязательное поле.')
         tags = obj.get('tags')
         if not tags:
             raise serializers.ValidationError('Нужно указать минимум 1 тег.')
@@ -267,8 +268,8 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
-        if not validated_data.get('image'):
-            validated_data['image'] = instance.image
+        if 'image' not in validated_data:
+            validated_data.pop('image', None)
         instance = super().update(instance, validated_data)
         self.tags_and_ingredients_set(instance, tags, ingredients)
         return instance
