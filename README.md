@@ -92,7 +92,7 @@
 
 ## Документация API
 
-Документация API доступна по следующему адресу: [alxlen.ru/api/docs/](http://alxlen.ru/api/docs/)
+Документация API доступна по адресу: [alxlen.ru/api/docs/](http://alxlen.ru/api/docs/)
 
 ### Автор.
 

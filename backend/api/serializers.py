@@ -1,5 +1,4 @@
 from django.db import transaction
-
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
 from djoser.serializers import UserSerializer as BaseUserSerializer
 from drf_extra_fields.fields import Base64ImageField
@@ -132,13 +131,6 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = UserSerializer(instance.author,
                                         context=self.context).data
-        recipes_limit = (self.context['request']
-                         .query_params.get('recipes_limit'))
-
-        if recipes_limit and recipes_limit.isdigit():
-            representation['recipes'] = representation['recipes'][:int(
-                recipes_limit)]
-        representation['is_subscribed'] = True
         return representation
 
 
@@ -220,7 +212,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                   'image', 'cooking_time')
 
     def validate(self, obj):
-        if not self.instance and 'image' not in self.initial_data:
+        if not self.instance and not obj.get('image'):
             raise serializers.ValidationError('Обязательное поле.')
         for field in ['name', 'text', 'cooking_time']:
             if not obj.get(field):
@@ -242,8 +234,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def tags_and_ingredients_set(self, recipe, tags, ingredients):
-        if self.instance:
-            recipe.recipe_ingredients.all().delete()
         recipe.tags.set(tags)
         ingredients_list = [
             IngredientInRecipe(
@@ -268,8 +258,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
-        if 'image' not in validated_data:
-            validated_data.pop('image', None)
+        instance.recipe_ingredients.all().delete()
         instance = super().update(instance, validated_data)
         self.tags_and_ingredients_set(instance, tags, ingredients)
         return instance
